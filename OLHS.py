@@ -59,14 +59,15 @@ class OLHS:
 
             for i in range(self.dim):
                 if(self.pop>b[i]):
+                    print("bbbbb")
                     lhd[i] = np.append(np.tile(np.append(
                     np.arange(properties_list[i][0], properties_list[i][1], properties_list[i][2]),
-                    self.properties_list[i][1]), c[i]), np.random.permutation(
+                    properties_list[i][1]), c[i]), np.random.permutation(
                     np.arange(properties_list[i][0], properties_list[i][1], properties_list[i][2])))[
                          0:self.pop]
-
+                    random.shuffle(lhd[i])
                 else:
-                    # print("b[i]",b[i])
+                    print("b[i]",b[i])
                     d = int(b[i]) // int(self.pop)
                     r = int(b[i]) % int(self.pop)
                     index = list(range(self.pop))
@@ -87,6 +88,7 @@ class OLHS:
                         result.append(s)
                     random.shuffle(result)
                     lhd[i]=result
+                    random.shuffle(lhd[i])
             self.initial_sample=lhd.transpose()
             return self.initial_sample
 
@@ -175,8 +177,8 @@ class OLHS:
             q+=1
         return m_xOldBest
 if __name__=="__main__":
-    bound = [[0, 1.0,], [0, 1.0]]
-    a = OLHS(bound, 20, 500,"center")
+    bound = [[0, 1.0,0.01], [0, 1.0,0.01]]
+    a = OLHS(bound, 20, 0,"center")
     c = a.sampling()
     print(c)
     import matplotlib.pyplot as plt
