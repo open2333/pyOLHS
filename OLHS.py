@@ -7,15 +7,45 @@ import math
 
 class OLHS:
     def __init__(self,bound:list,population:int=10,iteration:int=1,StratiType:str="center"):
-        self.bound=np.array(bound)
+        self.real_bound=np.array(bound,float)
+        self.scaled_bound=self.scaleBound(bound)
         self.pop=population
         self.iteration=iteration
         self.type=StratiType
         self.initial_sample=None
-        self.dim=self.bound.shape[0]
+        self.dim=self.real_bound.shape[0]
         self.m_bestfJ=[]
         self.m_bestfIn=[]
         self.m_bestfOuter=[]
+
+    @staticmethod
+    def restore_inputs(bound, scaled_bound, norm_inputs) -> np.ndarray:
+
+        norm_inputs = np.array(norm_inputs,float)
+        pro = np.array(bound)
+        pro_t = np.transpose(pro)
+        norm_pro = np.array(scaled_bound)
+        norm_pro_t = np.transpose(norm_pro)
+        unnorm_in = (norm_inputs - norm_pro_t[0]) / ((norm_pro_t[1] - norm_pro_t[0]) / (pro_t[1] - pro_t[0])) + pro_t[0]
+        return unnorm_in
+
+    @staticmethod
+    def scaleBound(real_boundary: list, norm_low=0.0,
+                   norm_up=1.0) :
+        pro = np.array(real_boundary,float)
+        pro_t = np.transpose(pro)
+        norm_pro_t = copy.deepcopy(pro_t)
+        if len(real_boundary[0]) == 3:
+            norm_pro_t[2] = np.full_like(norm_pro_t[0], (norm_up - norm_low) ) / (
+                        norm_pro_t[1] - norm_pro_t[0]) * (
+                                norm_pro_t[2])
+        else:
+            pass
+        norm_pro_t[0] = np.full_like(norm_pro_t[0], norm_low)
+        norm_pro_t[1] = np.full_like(norm_pro_t[1], norm_up)
+        norm_pro = np.transpose(norm_pro_t)
+        return norm_pro
+
     @staticmethod
     def ith_in_2_combinations(n, i):
         i = n * (n - 1) // 2 - i - 1
@@ -38,28 +68,27 @@ class OLHS:
         random.shuffle(index)
         return index
     def initial_lhs(self):
-        if self.bound.shape[1] == 2:
-            tp1 = (self.bound[:, 1] - self.bound[:, 0]) / self.pop
+        if self.scaled_bound.shape[1] == 2:
+            tp1 = (self.scaled_bound[:, 1] - self.scaled_bound[:, 0]) / self.pop
             tp2 = np.linspace(0, self.pop - 1, self.pop).reshape(1, self.pop)
-            raw_1 = tp1.reshape(-1, 1) @ tp2 + np.tile(self.bound[:, 0], (self.pop, 1)).T
+            raw_1 = tp1.reshape(-1, 1) @ tp2 + np.tile(self.scaled_bound[:, 0], (self.pop, 1)).T
             if self.type == "random":
-                raw_3 = np.abs(np.random.rand(self.bound.shape[0], self.pop))
+                raw_3 = np.abs(np.random.rand(self.scaled_bound.shape[0], self.pop))
             elif self.type == "center":
-                raw_3 = np.ones((self.bound.shape[0], self.pop)) * 0.5
+                raw_3 = np.ones((self.scaled_bound.shape[0], self.pop)) * 0.5
             else:
-                raw_3 = np.ones((self.bound.shape[0], self.pop)) * 0.5
+                raw_3 = np.ones((self.scaled_bound.shape[0], self.pop)) * 0.5
             samples = (raw_1 + np.tile(tp1, (self.pop, 1)).T * raw_3).T
             self.initial_sample=samples
             return self.initial_sample
-        if self.bound.shape[1]==3:
-            properties_list = np.array(self.bound)
+        if self.scaled_bound.shape[1]==3:
+            properties_list = np.array(self.scaled_bound)
             b = (properties_list[:, 1] - properties_list[:, 0]) / properties_list[:, 2]
             c = np.ceil(self.pop // b).astype('int')
             lhd = np.zeros((self.dim, self.pop))
 
             for i in range(self.dim):
                 if(self.pop>b[i]):
-                    print("bbbbb")
                     lhd[i] = np.append(np.tile(np.append(
                     np.arange(properties_list[i][0], properties_list[i][1], properties_list[i][2]),
                     properties_list[i][1]), c[i]), np.random.permutation(
@@ -67,7 +96,6 @@ class OLHS:
                          0:self.pop]
                     random.shuffle(lhd[i])
                 else:
-                    print("b[i]",b[i])
                     d = int(b[i]) // int(self.pop)
                     r = int(b[i]) % int(self.pop)
                     index = list(range(self.pop))
@@ -90,6 +118,7 @@ class OLHS:
                     lhd[i]=result
                     random.shuffle(lhd[i])
             self.initial_sample=lhd.transpose()
+
             return self.initial_sample
 
     def mindis(self,A: np.ndarray) -> np.ndarray:
@@ -172,13 +201,15 @@ class OLHS:
                 not_improved+=1
                 Th *= 1.43 if n_acpt < (0.1 * J) else 0.9 if n_acpt >= (0.8 * J) else 1
             if(not_improved>=bare):
-                return m_xOldBest
-
+                m_xOldBest_ = self.restore_inputs(self.real_bound, self.scaled_bound, m_xOldBest)
+                return m_xOldBest_
             q+=1
-        return m_xOldBest
+        m_xOldBest_ = self.restore_inputs(self.real_bound, self.scaled_bound, m_xOldBest)
+        return m_xOldBest_
 if __name__=="__main__":
-    bound = [[0, 1.0,0.01], [0, 1.0,0.01]]
-    a = OLHS(bound, 20, 0,"center")
+    bound = [[0,50],[5000,8000]]
+    a = OLHS(bound, 20, 5000,"center")
+    print(a.scaled_bound)
     c = a.sampling()
     print(c)
     import matplotlib.pyplot as plt
