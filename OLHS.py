@@ -6,7 +6,7 @@ import copy
 import math
 
 class OLHS:
-    def __init__(self,bound:list,population:int=10,iteration:int=1,StratiType:str="center"):
+    def __init__(self,bound:list,population:int=10,iteration:int=1,StratiType:str="center",initseed=None,optseed=None):
         self.real_bound=np.array(bound,float)
         self.scaled_bound=self.scaleBound(bound)
         self.pop=population
@@ -17,7 +17,8 @@ class OLHS:
         self.m_bestfJ=[]
         self.m_bestfIn=[]
         self.m_bestfOuter=[]
-
+        self.seed1=int((datetime.now() - datetime(1970, 1, 1)).total_seconds()) if initseed is None else initseed
+        self.seed2=int((datetime.now() - datetime(1970, 1, 1)).total_seconds()) if optseed is None else optseed
     @staticmethod
     def restore_inputs(bound, scaled_bound, norm_inputs) -> np.ndarray:
 
@@ -52,9 +53,9 @@ class OLHS:
         t = int((math.sqrt(8 * i + 1) - 1) / 2)
         return (n - t - 2, n - 1 - (i - t * (t + 1) // 2))
     @staticmethod
-    def unique_random_n_N_ref(n, N):
-        seed = int((datetime.now() - datetime(1970, 1, 1)).total_seconds())
+    def unique_random_n_N_ref(n, N,seed=None):
         np.random.seed(seed)
+        random.seed(seed)
         index = []
         number = 0
         while n:
@@ -68,6 +69,8 @@ class OLHS:
         random.shuffle(index)
         return index
     def initial_lhs(self):
+        random.seed(self.seed1)
+        np.random.seed(self.seed1)
         if self.scaled_bound.shape[1] == 2:
             tp1 = (self.scaled_bound[:, 1] - self.scaled_bound[:, 0]) / self.pop
             tp2 = np.linspace(0, self.pop - 1, self.pop).reshape(1, self.pop)
@@ -147,11 +150,14 @@ class OLHS:
         return np.power(p1,0.5)
 
     def sampling(self):
+
+        random.seed(self.seed2)
         if self.initial_sample is None:
             self.initial_lhs()
-        X=self.initial_sample.copy()
-        X_best=X.copy()
-        m_xOldBest = X_best.copy()
+        print("init", self.initial_sample)
+        X=self.initial_sample.copy(order='K')
+        X_best=X.copy(order='K')
+        m_xOldBest = X_best.copy(order='K')
         fX_oldbest=fX_best=fX=fX0=self.mindis(X)
         Th=0.05*fX0
         q=0
@@ -171,9 +177,9 @@ class OLHS:
             n_imp=0
             while(i<M):
                 mod=i%self.dim
-                X_try=X.copy()
+                X_try=X.copy(order='K')
                 fX_try=10e9
-                indexcombinations=self.unique_random_n_N_ref(J,ne)
+                indexcombinations=self.unique_random_n_N_ref(J,ne,self.seed2)
                 for j in range(J):
                     temp=self.ith_in_2_combinations(self.pop,indexcombinations[j])
                     currentValue = self.partialmin(X, fX, mod, temp[0], temp[1])
@@ -182,19 +188,19 @@ class OLHS:
                         temp1 = temp
                 X_try[temp1[0],mod],X_try[temp1[1],mod]=X_try[temp1[1],mod],X_try[temp1[0],mod]
                 if(fX_try - fX <= Th * random.random()):
-                    X = X_try.copy()
+                    X = X_try.copy(order='K')
                     fX = fX_try
                     n_acpt += 1
                     if (fX < fX_best):
-                        X_best = X.copy()
+                        X_best = X.copy(order='K')
                         fX_best = fX
                         n_imp += 1
                 i+=1
             if(fX_oldbest - fX_best > tol):
                 not_improved = 0
-                m_xOldBest = X_best.copy()
+                m_xOldBest = X_best.copy(order='K')
                 fX_oldbest = fX_best
-                X = X_best.copy()
+                X = X_best.copy(order='K')
                 fX = fX_best
                 Th *= 0.8 if (n_acpt >= (0.1 * J)) and (n_imp < n_acpt) else 1.25
             else:
@@ -208,7 +214,7 @@ class OLHS:
         return m_xOldBest_
 if __name__=="__main__":
     bound = [[0,50],[5000,8000]]
-    a = OLHS(bound, 20, 5000,"center")
+    a = OLHS(bound, 20, 500,"random",initseed=1,optseed=4)
     print(a.scaled_bound)
     c = a.sampling()
     print(c)
