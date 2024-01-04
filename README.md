@@ -2,15 +2,23 @@
 --------------------------------------------------------------------------------
 
 pyOLHS is a Python package that provides Optimal LatinHyperCube sampling.
+
 The introduction of Algorithms is on my WeChat Official Account.
+
 The Python version of the OLHS algorithm is less efficient. In the future, I will release an open-source C++ version optimized with openMP and TBB. 
+
 Additionally, I plan to update other multi-disciplinary optimization algorithms, such as Kriging models and other optimization algorithms like Bayesian Optimization.
 
 ## Getting Started
 ### discrete variable
 ```python
 bound = [[0, 1.0, 0.01], [0, 1.0, 0.01]]
-a = OLHS(bound, 20, 100)
+#2024.1.4:initseed means to fix the origin lathin sampling result optseed means to fix the optimization method
+#if you want to get the same optimization method , fix them both, 
+a = OLHS(bound, 20, 100,initseed=1,optseed=1) 
+#if you want to see different optimization result from the same origin latin result, only fix initseed
+a = OLHS(bound, 20, 100,initseed=1)
+
 c = a.sampling()
 ```
 <img src="https://github.com/open2333/pyOLHS/assets/43056772/65a9ff70-8442-46c8-85bb-d8b2048bd433" width="500" height="400">
@@ -31,7 +39,8 @@ c = a.sampling()
 
 <img src="https://github.com/open2333/pyOLHS/assets/43056772/fdbbc989-6e4b-4c98-a5c3-8223109cd4ff" width="600" height="400">
 
-
+## Release Note:
+-2024.1.4 add random seed to both origin latin sampling and optimization algorithm
 
 
 ## Communication
