@@ -5,6 +5,7 @@ import numpy as np
 import copy
 import math
 
+
 class OLHS:
     def __init__(self,bound:list,population:int=10,iteration:int=1,StratiType:str="center",initseed=None,optseed=None):
         self.real_bound=np.array(bound,float)
@@ -123,8 +124,8 @@ class OLHS:
             self.initial_sample=lhd.transpose()
 
             return self.initial_sample
-
-    def mindis(self,A: np.ndarray) -> np.ndarray:
+    @staticmethod
+    def mindis(A: np.ndarray) -> np.ndarray:
         SqED = cdist(A, A, 'sqeuclidean')
         SqED[SqED < 1e-4] = 0
         d = np.ravel(SqED)
@@ -132,7 +133,9 @@ class OLHS:
         s = pow(d, -1)
         Fx = pow(0.5*np.sum(s), 0.5)
         return Fx
-    def sq2(self,A: np.ndarray,B:np.ndarray) -> np.ndarray:
+
+    @staticmethod
+    def sq2(A: np.ndarray,B:np.ndarray) -> np.ndarray:
         SqED = cdist(A, B, 'sqeuclidean')
         SqED[SqED < 1e-4] = 0
         d = np.ravel(SqED)
@@ -154,7 +157,7 @@ class OLHS:
         random.seed(self.seed2)
         if self.initial_sample is None:
             self.initial_lhs()
-        print("init", self.initial_sample)
+        #print("init", self.initial_sample)
         X=self.initial_sample.copy(order='K')
         X_best=X.copy(order='K')
         m_xOldBest = X_best.copy(order='K')
@@ -165,8 +168,8 @@ class OLHS:
         ne = (self.pop * (self.pop - 1) / 2)
         J_t = np.ceil(ne / 5)
         temp1=None
-        J_max=50
-        M_max=50
+        J_max=1000
+        M_max=200
         J = math.floor(min(J_max, max(J_t, ne)) if J_t < J_max else J_max)
         M = math.floor(min(M_max, int(np.ceil(2 * ne * self.dim / J))))
         bare=int(self.iteration/10)
@@ -213,8 +216,8 @@ class OLHS:
         m_xOldBest_ = self.restore_inputs(self.real_bound, self.scaled_bound, m_xOldBest)
         return m_xOldBest_
 if __name__=="__main__":
-    bound = [[0,50],[5000,8000]]
-    a = OLHS(bound, 20, 500,"random",initseed=1,optseed=4)
+    bound = [[0,1000,1],[5000,8000,1]]
+    a = OLHS(bound, 40, 1000,"center")
     print(a.scaled_bound)
     c = a.sampling()
     print(c)
