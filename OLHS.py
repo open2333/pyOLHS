@@ -7,7 +7,7 @@ import math
 
 
 class OLHS:
-    def __init__(self,bound:list,population:int=10,iteration:int=1,StratiType:str="center",initseed=None,optseed=None):
+    def __init__(self,bound:list,population:int=10,iteration:int=1,StratiType:str="center",initseed=None,optseed=None,unique=False):
         self.real_bound=np.array(bound,float)
         self.scaled_bound=self.scaleBound(bound)
         self.pop=population
@@ -20,6 +20,7 @@ class OLHS:
         self.m_bestfOuter=[]
         self.seed1=int((datetime.now() - datetime(1970, 1, 1)).total_seconds()) if initseed is None else initseed
         self.seed2=int((datetime.now() - datetime(1970, 1, 1)).total_seconds()) if optseed is None else optseed
+        self.unique=unique
     @staticmethod
     def restore_inputs(bound, scaled_bound, norm_inputs) -> np.ndarray:
 
@@ -118,6 +119,7 @@ class OLHS:
                             # print("i",j)
                             s = (j * d + cum + p) * properties_list[i][2]
                         result.append(s)
+                        print("result",result)
                     random.shuffle(result)
                     lhd[i]=result
                     random.shuffle(lhd[i])
@@ -209,16 +211,73 @@ class OLHS:
                 Th *= 1.43 if n_acpt < (0.1 * M) else 0.9 if n_acpt >= (0.8 * M) else 1
             if(not_improved>=bare):
                 m_xOldBest_ = self.restore_inputs(self.real_bound, self.scaled_bound, m_xOldBest)
+                if (self.unique):
+                    m_xOldBest_ = self.unique_(m_xOldBest_)
                 return m_xOldBest_
             q+=1
         m_xOldBest_ = self.restore_inputs(self.real_bound, self.scaled_bound, m_xOldBest)
+        if(self.unique):
+            m_xOldBest_=self.unique_(m_xOldBest_)
         return m_xOldBest_
+
+    def wholeindex(self,samples):
+        #samples index in whole FFD
+        num_dims=np.ceil(self.real_bound[:,1]-self.real_bound[:,0])/self.real_bound[:,2]+1
+        num_of_samples = np.ceil((samples - self.real_bound[:, 0].T) / self.real_bound[:, 2].T)
+        p = np.zeros((samples.shape[0], 1))
+        for i in range(num_of_samples.shape[1]):
+            s = np.ones((samples.shape[0], 1))
+            for j in range(i + 1, num_of_samples.shape[1]):
+                s *= num_dims[j]
+            p += num_of_samples[:, i:i + 1] * s
+        p=p.flatten()
+        p.sort()
+        s=p.astype(int)
+        return s
+
+
+    def unique_(self,samples):
+        ffd=[]
+        for i in range(self.real_bound.shape[0]):
+            s=(self.real_bound[i,1]-self.real_bound[i,0])/self.real_bound[i,2]
+            ffd_=[self.real_bound[i,0]+j*self.real_bound[i,2] for j in range(int(s))]
+            if (math.ceil(s)!= math.floor(s)):
+                ffd_.append(self.real_bound[i,2])
+            ffd.append(ffd_)
+        sample_index_inFFD=self.wholeindex(samples).tolist()
+        # dup index in samples
+        dup_list=[]
+        for i in range(samples.shape[0]):
+            for j in range(i + 1, samples.shape[0]):
+                if (samples[i, :] == samples[j, :]).all():
+                    dup_list.append(i)
+        dup_samples=samples[dup_list,:]
+        dup_sample_index_inFFD = self.wholeindex(dup_samples).tolist()
+        for i in dup_sample_index_inFFD:
+            sample_index_inFFD.remove(i)
+        num=np.ceil(self.real_bound[:,1]-self.real_bound[:,0])/self.real_bound[:,2]+1
+        t=1
+        for i in num:
+            t*=int(i)
+        sum = 1
+        whole_list=[i for i in range(t)]
+        q = np.ones((1, len(ffd)))
+        for i in range(len(ffd)):
+            q[0, len(ffd) - i - 1] = sum
+            sum = sum * len(ffd[len(ffd) - i - 1])
+        i=0
+        for i in sample_index_inFFD:
+            whole_list.remove(i)
+        for i in dup_list:
+            s = whole_list[0]
+            for j in range(len(ffd)):
+                samples[i, j] = ffd[j][math.floor((s / q[0, j]) % (len(ffd[j])))]
+                del whole_list[0]
+        return samples
+
 if __name__=="__main__":
-    bound = [[45,70,5],[15,25,1],[80,90,1]]
-    a = OLHS(bound, 50, 500,"center",initseed=1)
-    print(a.scaled_bound)
+    bound = [[1, 6, 1], [2, 10, 2], [4, 100, 4]]
+    a = OLHS(bound, 50, 20, initseed=1, optseed=1,unique=True)
     c = a.sampling()
-    print(c)
-    import matplotlib.pyplot as plt
-    plt.scatter(c[:, 0], c[:, 1])
-    plt.show()
+
+
