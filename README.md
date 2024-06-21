@@ -8,7 +8,14 @@ The introduction of Algorithms is on my WeChat Official Account.
 The Python version of the OLHS algorithm is less efficient. In the future, I will release an open-source C++ version optimized with openMP and TBB. 
 
 Additionally, I plan to update other multi-disciplinary optimization algorithms, such as Kriging models and other optimization algorithms like Bayesian Optimization.
-
+# Record
+2024.6.21 更新了采样结果去重方法
+unique=True进行去重
+```python
+ bound = [[1, 6, 1], [2, 10, 2], [4, 100, 4]]
+    a = OLHS(bound, 50, 20, initseed=1, optseed=1,unique=True)
+    c = a.sampling()
+```
 ## Getting Started
 ### discrete variable
 ```python
